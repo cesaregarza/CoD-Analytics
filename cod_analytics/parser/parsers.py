@@ -82,4 +82,7 @@ def parse_match_events(
                 ["vx", "vy"],
             ],
         )
+        engagements_df["transformed"] = True
+    else:
+        engagements_df["transformed"] = False
     return engagements_df.loc[:, desired_order]

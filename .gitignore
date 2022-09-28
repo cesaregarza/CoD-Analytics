@@ -146,3 +146,4 @@ cython_debug/
 
 test.ipynb
 test.py
+.vscode/settings.json

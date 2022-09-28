@@ -153,31 +153,28 @@ class Homography:
         Returns:
             Homography: Homography object.
         """
-        source_points = np.array(
-            [
-                [source["map_left"], source["map_top"]],
-                [source["map_right"], source["map_top"]],
-                [source["map_right"], source["map_bottom"]],
-                [source["map_left"], source["map_bottom"]],
-            ]
-        )
-        target_points = np.array(
-            [
-                [target["map_left"], target["map_top"]],
-                [target["map_right"], target["map_top"]],
-                [target["map_right"], target["map_bottom"]],
-                [target["map_left"], target["map_bottom"]],
-            ]
-        )
 
-        source_rotation = source["map_rotation"]
-        target_rotation = target["map_rotation"]
+        def get_points(reference: TransformReference) -> np.ndarray:
+            points = np.array(
+                [
+                    [reference["map_left"], reference["map_top"]],
+                    [reference["map_right"], reference["map_top"]],
+                    [reference["map_right"], reference["map_bottom"]],
+                    [reference["map_left"], reference["map_bottom"]],
+                ]
+            )
+            center = (
+                (reference["map_left"] + reference["map_right"]) / 2,
+                (reference["map_top"] + reference["map_bottom"]) / 2,
+            )
+            rotation = Homography.rotation_matrix(
+                reference["map_rotation"], rad=False
+            )
+            points = (points - center) @ rotation
+            return points + center
 
-        source_rotation_matrix = Homography.rotation_matrix(source_rotation)
-        target_rotation_matrix = Homography.rotation_matrix(target_rotation)
-
-        source_points = source_points @ source_rotation_matrix
-        target_points = target_points @ target_rotation_matrix
+        source_points = get_points(source)
+        target_points = get_points(target)
 
         homography = Homography()
         homography.fit(source_points, target_points)
