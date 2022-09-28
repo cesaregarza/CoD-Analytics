@@ -190,23 +190,28 @@ def test_homography_transform_reference(
 
     assert np.allclose(homography.transform(coordinates), expected)
 
+
 @pytest.mark.parametrize(
     "source, target, df, labels, expected_df",
     [
-        ( # No transform
+        (  # No transform
             np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]),
             np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]),
-            pd.DataFrame({
-                "x": [0.5],
-                "y": [0.5],
-            }),
+            pd.DataFrame(
+                {
+                    "x": [0.5],
+                    "y": [0.5],
+                }
+            ),
             ["x", "y"],
-            pd.DataFrame({
-                "x": [0.5],
-                "y": [0.5],
-            }),
+            pd.DataFrame(
+                {
+                    "x": [0.5],
+                    "y": [0.5],
+                }
+            ),
         ),
-        ( # Transform, Scale, Rotate
+        (  # Transform, Scale, Rotate
             np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]),
             np.array(
                 [
@@ -216,17 +221,21 @@ def test_homography_transform_reference(
                     [1.5, np.sqrt(2) + 1.5],
                 ]
             ),
-            pd.DataFrame({
-                "x": [0.5, 0.75],
-                "y": [0.5, 0.75],
-            }),
+            pd.DataFrame(
+                {
+                    "x": [0.5, 0.75],
+                    "y": [0.5, 0.75],
+                }
+            ),
             ["x", "y"],
-            pd.DataFrame({
-                "x": [1.5, 1.5 + np.sqrt(2) / 2],
-                "y": [1.5, 1.5],
-            }),
+            pd.DataFrame(
+                {
+                    "x": [1.5, 1.5 + np.sqrt(2) / 2],
+                    "y": [1.5, 1.5],
+                }
+            ),
         ),
-        ( # Transform, Scale, Rotate, Multiple Column Sets
+        (  # Transform, Scale, Rotate, Multiple Column Sets
             np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]),
             np.array(
                 [
@@ -236,19 +245,23 @@ def test_homography_transform_reference(
                     [1.5, np.sqrt(2) + 1.5],
                 ]
             ),
-            pd.DataFrame({
-                "x1": [0.5, 0.75],
-                "y1": [0.5, 0.75],
-                "x2": [0.5, 0.75],
-                "y2": [0.5, 0.75],
-            }),
+            pd.DataFrame(
+                {
+                    "x1": [0.5, 0.75],
+                    "y1": [0.5, 0.75],
+                    "x2": [0.5, 0.75],
+                    "y2": [0.5, 0.75],
+                }
+            ),
             [["x1", "y1"], ["x2", "y2"]],
-            pd.DataFrame({
-                "x1": [1.5, 1.5 + np.sqrt(2) / 2],
-                "y1": [1.5, 1.5],
-                "x2": [1.5, 1.5 + np.sqrt(2) / 2],
-                "y2": [1.5, 1.5],
-            }),
+            pd.DataFrame(
+                {
+                    "x1": [1.5, 1.5 + np.sqrt(2) / 2],
+                    "y1": [1.5, 1.5],
+                    "x2": [1.5, 1.5 + np.sqrt(2) / 2],
+                    "y2": [1.5, 1.5],
+                }
+            ),
         ),
     ],
     ids=[
@@ -270,6 +283,4 @@ def test_homography_transform_df(
     homography.fit(source, target)
     out_df = homography.transform_dataframe(df, labels)
 
-    pdt.assert_frame_equal(
-        out_df, expected_df
-    )
+    pdt.assert_frame_equal(out_df, expected_df)
