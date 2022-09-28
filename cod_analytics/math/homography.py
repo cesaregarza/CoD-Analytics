@@ -87,6 +87,10 @@ class Homography:
     ) -> pd.DataFrame:
         """Transforms the dataframe using the fitted homography.
 
+        Given a dataframe and a list of columns, transforms the columns using
+        the fitted homography. If given a list of lists, each sublist is
+        treated as a separate set of columns to transform.
+
         Args:
             df (pd.DataFrame): Dataframe to transform.
             columns (list[str] | list[list[str]]): Columns to transform. If
@@ -144,14 +148,19 @@ class Homography:
     def from_transform_reference(
         source: TransformReference, target: TransformReference
     ) -> "Homography":
-        """Creates a homography from two transform references.
+        """Creates a homography from two transform references. 
+
+        Given two TransformReference objects, this method will separate the
+        bounds and create points for the corners of the bounds. It will then
+        rotate the points by the angle of the transform reference and use those
+        points to create and fit a homography.
 
         Args:
             source (TransformReference): Source transform reference.
             target (TransformReference): Target transform reference.
 
         Returns:
-            Homography: Homography object.
+            Homography: Homography object, already fitted.
         """
 
         def get_points(reference: TransformReference) -> np.ndarray:

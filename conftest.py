@@ -1,3 +1,3 @@
 pytest_plugins = [
-    "tests.fixtures.homography",
+    # "tests.fixtures.homography",
 ]
