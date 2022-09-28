@@ -1,0 +1,17 @@
+ENG_COLUMN_ORDER = [
+    "match_id",
+    "map",
+    "mode",
+    "match_start",
+    "match_end",
+    "attacker",
+    "victim",
+    "time",
+    "ax",
+    "ay",
+    "vx",
+    "vy",
+    "aLoc",
+    "vLoc",
+    "cause",
+]
