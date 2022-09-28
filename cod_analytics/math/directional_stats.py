@@ -10,6 +10,7 @@ from cod_analytics.math.compiled_directional_functions import (
     cartesian_to_polar,
     polar_to_cartesian,
     project_to_unit_circle,
+    angular_mean
 )
 
 
@@ -51,4 +52,34 @@ class DirectionalStats:
         """
         self.attacker_xy: list[str] = ["ax", "ay"]
         self.victim_xy: list[str] = ["vx", "vy"]
-        self.data: pd.DataFrame = data
+        self.data: pd.DataFrame = data.copy()
+        self.data["angle"] = np.arctan2(
+            self.data["vy"] - self.data["ay"], self.data["vx"] - self.data["ax"]
+        )
+
+    def generate_vector_spaces(self, map_id: str, *args, **kwargs) -> npt.NDArray[np.complex128]:
+        """Generates attacker and victim vector spaces for the given map.
+
+        Args:
+            map_id (str): Map ID.
+
+        Returns:
+            npt.NDArray[np.complex128]: Vector space as a complex number. The
+                real component is the attacker and the imaginary component is
+                the victim.
+        """
+        mask = self.data["map_id"] == map_id
+        data = self.data.loc[mask, :]
+        x_max = data[["ax", "vx"]].max().max()
+        x_min = data[["ax", "vx"]].min().min()
+        y_max = data[["ay", "vy"]].max().max()
+        y_min = data[["ay", "vy"]].min().min()
+        a_vals, _, _, _ = binned_statistic_2d(
+            data["ax"], data["ay"], data["angle"], statistic=angular_mean,
+            range=[[x_min, x_max], [y_min, y_max]], *args, **kwargs
+        )
+        v_vals, _, _, _ = binned_statistic_2d(
+            data["vx"], data["vy"], data["angle"], statistic=angular_mean,
+            range=[[x_min, x_max], [y_min, y_max]], *args, **kwargs
+        )
+        return a_vals + 1j * v_vals

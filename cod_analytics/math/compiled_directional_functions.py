@@ -125,3 +125,17 @@ def distance_between_angles(
             diff = 2 * np.pi - diff
         out[i] = diff
     return out
+
+@nb.njit(nb.float64(nb.float64[:]))
+def angular_mean(theta: npt.NDArray[np.float64]) -> float:
+    """Calculates the mean of a set of angles.
+
+    Args:
+        theta (npt.NDArray[np.float64]): Array of angles.
+
+    Returns:
+        float: Mean of the data.
+    """
+    x = np.mean(np.cos(theta))
+    y = np.mean(np.sin(theta))
+    return np.arctan2(y, x)

@@ -4,6 +4,8 @@ ENG_COLUMN_ORDER = [
     "mode",
     "match_start",
     "match_end",
+    "team_a",
+    "team_v",
     "attacker",
     "victim",
     "time",

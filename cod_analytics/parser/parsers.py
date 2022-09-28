@@ -54,6 +54,9 @@ def parse_match_events(
     engagements_df["match_start"] = match_start
     engagements_df["match_end"] = match_end
 
+    engagements_df["team_a"] = engagements_df["a"] // 1000
+    engagements_df["team_v"] = engagements_df["v"] // 1000
+
     engagements_df = engagements_df.drop(columns=["a", "v"])
     desired_order = ENG_COLUMN_ORDER
     if with_transform:
