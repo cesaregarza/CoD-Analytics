@@ -126,6 +126,7 @@ def distance_between_angles(
         out[i] = diff
     return out
 
+
 @nb.njit(nb.float64(nb.float64[:]))
 def angular_mean(theta: npt.NDArray[np.float64]) -> float:
     """Calculates the mean of a set of angles.
@@ -139,3 +140,21 @@ def angular_mean(theta: npt.NDArray[np.float64]) -> float:
     x = np.mean(np.cos(theta))
     y = np.mean(np.sin(theta))
     return np.arctan2(y, x)
+
+
+@nb.njit(nb.complex128(nb.float64[:]))
+def angular_mean_var(theta: npt.NDArray[np.float64]) -> complex:
+    """Calculates the mean and variance of a set of angles.
+
+    Args:
+        theta (npt.NDArray[np.float64]): Array of angles.
+
+    Returns:
+        complex: Mean and variance of the data. Mean is the real part, variance
+            is the imaginary part.
+    """
+    x = np.mean(np.cos(theta))
+    y = np.mean(np.sin(theta))
+    angle = np.arctan2(y, x)
+    var = np.sqrt(np.square(x) + np.square(y))
+    return angle + 1j * var

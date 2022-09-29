@@ -7,10 +7,10 @@ import pandera.typing as pat
 from scipy.stats import binned_statistic_2d
 
 from cod_analytics.math.compiled_directional_functions import (
+    angular_mean_var,
     cartesian_to_polar,
     polar_to_cartesian,
     project_to_unit_circle,
-    angular_mean
 )
 
 
@@ -57,7 +57,9 @@ class DirectionalStats:
             self.data["vy"] - self.data["ay"], self.data["vx"] - self.data["ax"]
         )
 
-    def generate_vector_spaces(self, map_id: str, *args, **kwargs) -> npt.NDArray[np.complex128]:
+    def generate_vector_spaces(
+        self, map_id: str, *args, **kwargs
+    ) -> tuple[np.complex128, np.complex128]:
         """Generates attacker and victim vector spaces for the given map.
 
         Args:
@@ -75,11 +77,21 @@ class DirectionalStats:
         y_max = data[["ay", "vy"]].max().max()
         y_min = data[["ay", "vy"]].min().min()
         a_vals, _, _, _ = binned_statistic_2d(
-            data["ax"], data["ay"], data["angle"], statistic=angular_mean,
-            range=[[x_min, x_max], [y_min, y_max]], *args, **kwargs
+            data["ax"],
+            data["ay"],
+            data["angle"],
+            statistic=angular_mean_var,
+            range=[[x_min, x_max], [y_min, y_max]],
+            *args,
+            **kwargs,
         )
         v_vals, _, _, _ = binned_statistic_2d(
-            data["vx"], data["vy"], data["angle"], statistic=angular_mean,
-            range=[[x_min, x_max], [y_min, y_max]], *args, **kwargs
+            data["vx"],
+            data["vy"],
+            data["angle"],
+            statistic=angular_mean_var,
+            range=[[x_min, x_max], [y_min, y_max]],
+            *args,
+            **kwargs,
         )
-        return a_vals + 1j * v_vals
+        return (a_vals, v_vals)

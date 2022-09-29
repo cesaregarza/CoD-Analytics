@@ -148,7 +148,7 @@ class Homography:
     def from_transform_reference(
         source: TransformReference, target: TransformReference
     ) -> "Homography":
-        """Creates a homography from two transform references. 
+        """Creates a homography from two transform references.
 
         Given two TransformReference objects, this method will separate the
         bounds and create points for the corners of the bounds. It will then
