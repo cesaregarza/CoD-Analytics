@@ -1,3 +1,5 @@
+import typing
+
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
@@ -106,6 +108,8 @@ def parse_match_events(
         )
     else:
         homography = Homography()
+        from_points = typing.cast(npt.NDArray[np.float64], from_points)
+        to_points = typing.cast(npt.NDArray[np.float64], to_points)
         homography.fit(from_points, to_points)
     engagements_df = homography.transform_dataframe(
         engagements_df,
@@ -115,3 +119,4 @@ def parse_match_events(
         ],
     )
     engagements_df["transformed"] = True
+    return engagements_df.loc[:, desired_order]

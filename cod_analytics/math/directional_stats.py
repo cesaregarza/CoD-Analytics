@@ -55,7 +55,7 @@ class DirectionalStats:
         self.data: pd.DataFrame = data.copy()
         self.data["delta_x"] = self.data["ax"] - self.data["vx"]
         self.data["delta_y"] = self.data["ay"] - self.data["vy"]
-        self.data["angle"] = np.arctan2(
+        self.data["angle"] = np.arctan2( #type: ignore
             -self.data["delta_y"], -self.data["delta_x"]
         )
 
