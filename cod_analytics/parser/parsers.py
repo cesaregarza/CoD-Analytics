@@ -7,7 +7,6 @@ import pandas as pd
 from cod_analytics.classes import TransformReference
 from cod_analytics.constants import ENG_COLUMN_ORDER
 from cod_analytics.math.homography import Homography
-from cod_analytics.math.util import xor
 
 
 def parse_match_events(
@@ -82,11 +81,6 @@ def parse_match_events(
         engagements["transformed"] = False
         return engagements_df.loc[:, desired_order]
 
-    if xor(to_points is None, from_points is None):
-        raise ValueError(
-            "to_points and from_points must be used at the same time"
-        )
-
     if (to_points is None) and (from_points is None):
         reference_from = TransformReference(
             map_left=json["map"]["left"],
@@ -106,11 +100,13 @@ def parse_match_events(
         homography = Homography.from_transform_reference(
             reference_from, to_reference
         )
-    else:
+    elif (to_points is not None) and (from_points is not None):
         homography = Homography()
-        from_points = typing.cast(npt.NDArray[np.float64], from_points)
-        to_points = typing.cast(npt.NDArray[np.float64], to_points)
         homography.fit(from_points, to_points)
+    else:
+        raise ValueError(
+            "to_points and from_points must be used at the same time"
+        )
     engagements_df = homography.transform_dataframe(
         engagements_df,
         columns=[
