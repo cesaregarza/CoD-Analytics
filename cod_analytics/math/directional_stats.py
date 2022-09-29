@@ -7,11 +7,13 @@ import pandera.typing as pat
 from scipy.stats import binned_statistic_2d
 
 from cod_analytics.math.compiled_directional_functions import (
+    angular_mean_cartesian,
     angular_mean_var,
     cartesian_to_polar,
     polar_to_cartesian,
     project_to_unit_circle,
 )
+from cod_analytics.math.diff_geo import wedge_many
 
 
 @nb.njit(nb.float64(nb.float64[:]))
@@ -58,6 +60,8 @@ class DirectionalStats:
         self.data["angle"] = np.arctan2(  # type: ignore
             -self.data["delta_y"], -self.data["delta_x"]
         )
+        self.data["norm_x"] = np.cos(self.data["angle"])
+        self.data["norm_y"] = np.sin(self.data["angle"])
 
     def generate_vector_spaces(
         self, map_id: str, *args, **kwargs
@@ -93,7 +97,7 @@ class DirectionalStats:
             data["ax"],
             data["ay"],
             data["angle"],
-            statistic=angular_mean_var,
+            statistic=angular_mean_cartesian,
             range=[[x_min, x_max], [y_min, y_max]],
             *args,
             **kwargs,
@@ -102,9 +106,25 @@ class DirectionalStats:
             data["vx"],
             data["vy"],
             -data["angle"],
-            statistic=angular_mean_var,
+            statistic=angular_mean_cartesian,
             range=[[x_min, x_max], [y_min, y_max]],
             *args,
             **kwargs,
         )
         return (a_vals, v_vals, x_edges, y_edges)
+
+    def generate_bivector_field(
+        self,
+        a_vals: npt.NDArray[np.complex128],
+        v_vals: npt.NDArray[np.complex128],
+    ) -> npt.NDArray[np.complex128]:
+        a_x = a_vals.real
+        a_y = a_vals.imag
+        v_x = v_vals.real
+        v_y = v_vals.imag
+
+        a_vectors = np.column_stack([a_x, a_y])
+        v_vectors = np.column_stack([v_x, v_y])
+        dot = np.einsum("ij, ij->i", a_vectors, v_vectors)
+        wedge = wedge_many(a_vectors, v_vectors)
+        return dot + 1j * wedge
