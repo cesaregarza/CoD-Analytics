@@ -1,7 +1,10 @@
 import numpy as np
 import pytest
 
-from cod_analytics.math.compiled_directional_functions import angular_mean_var
+from cod_analytics.math.compiled_directional_functions import (
+    angular_mean_var,
+    project_to_unit_circle,
+)
 
 
 @pytest.mark.parametrize(
@@ -43,3 +46,19 @@ def test_angular_mean_var(
     res = angular_mean_var(angles)
     assert np.isclose(res.real, expected_mean)
     assert np.isclose(res.imag, expected_var)
+
+
+def test_project_to_unit_circle():
+    points = np.array(
+        [
+            [[2, 2], [np.sqrt(2) / 2, np.sqrt(2) / 2]],
+            [[3, 0], [1, 0]],
+            [[0.1, 0], [1, 0]],
+            [[-np.sqrt(3), 1], [-np.sqrt(3) / 2, 1 / 2]],
+        ]
+    )
+    x = points[:, 0, 0]
+    y = points[:, 0, 1]
+    expected = points[:, 1, :]
+    out = project_to_unit_circle(x, y)
+    assert np.allclose(out, expected)

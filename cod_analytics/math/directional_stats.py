@@ -53,22 +53,35 @@ class DirectionalStats:
         self.attacker_xy: list[str] = ["ax", "ay"]
         self.victim_xy: list[str] = ["vx", "vy"]
         self.data: pd.DataFrame = data.copy()
+        self.data["delta_x"] = self.data["ax"] - self.data["vx"]
+        self.data["delta_y"] = self.data["ay"] - self.data["vy"]
         self.data["angle"] = np.arctan2(
-            self.data["vy"] - self.data["ay"], self.data["vx"] - self.data["ax"]
+            -self.data["delta_y"], -self.data["delta_x"]
         )
 
     def generate_vector_spaces(
         self, map_id: str, *args, **kwargs
-    ) -> tuple[np.complex128, np.complex128]:
+    ) -> tuple[
+        npt.NDArray[np.complex128],
+        npt.NDArray[np.complex128],
+        npt.NDArray[np.float64],
+        npt.NDArray[np.float64],
+    ]:
         """Generates attacker and victim vector spaces for the given map.
 
         Args:
             map_id (str): Map ID.
 
         Returns:
-            npt.NDArray[np.complex128]: Vector space as a complex number. The
-                real component is the attacker and the imaginary component is
-                the victim.
+            tuple:
+                npt.NDArray[np.complex128]: Mean and variance of attacker
+                    vectors along bins. Real part is the mean angle in radians,
+                    imaginary part is the vector variance.
+                npt.NDArray[np.complex128]: Mean and variance of victim vectors
+                    along bins. Real part is the mean angle in radians,
+                    imaginary part is the vector variance.
+                npt.NDArray[np.float64]: Bin edges along the x-axis.
+                npt.NDArray[np.float64]: Bin edges along the y-axis.
         """
         mask = self.data["map_id"] == map_id
         data = self.data.loc[mask, :]
@@ -76,7 +89,7 @@ class DirectionalStats:
         x_min = data[["ax", "vx"]].min().min()
         y_max = data[["ay", "vy"]].max().max()
         y_min = data[["ay", "vy"]].min().min()
-        a_vals, _, _, _ = binned_statistic_2d(
+        a_vals, x_edges, y_edges, _ = binned_statistic_2d(
             data["ax"],
             data["ay"],
             data["angle"],
@@ -88,10 +101,10 @@ class DirectionalStats:
         v_vals, _, _, _ = binned_statistic_2d(
             data["vx"],
             data["vy"],
-            data["angle"],
+            -data["angle"],
             statistic=angular_mean_var,
             range=[[x_min, x_max], [y_min, y_max]],
             *args,
             **kwargs,
         )
-        return (a_vals, v_vals)
+        return (a_vals, v_vals, x_edges, y_edges)
