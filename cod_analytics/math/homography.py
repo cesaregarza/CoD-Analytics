@@ -1,10 +1,13 @@
-from typing import Callable, cast
+from typing import Callable, Concatenate, ParamSpec, TypeVar, cast
 
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
 
 from cod_analytics.classes import TransformReference
+
+T = TypeVar("T")
+P = ParamSpec("P")
 
 
 class Homography:
@@ -13,7 +16,7 @@ class Homography:
         self.fitted = False
 
     @staticmethod
-    def fitted_method(func: Callable) -> Callable:
+    def fitted_method(func: Callable[P, T]) -> Callable[P, T]:
         """Decorator to check if the homography is fitted.
 
         Args:
@@ -23,9 +26,10 @@ class Homography:
             Callable: Decorated function.
         """
 
-        def wrapper(self: "Homography", *args, **kwargs):
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+            self: Homography = cast(Homography, args[0])
             if self.fitted:
-                return func(self, *args, **kwargs)
+                return func(*args, **kwargs)
             else:
                 raise RuntimeError(
                     "Homography must be fitted before calling this method."

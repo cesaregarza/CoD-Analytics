@@ -118,6 +118,17 @@ class DirectionalStats:
         a_vals: npt.NDArray[np.complex128],
         v_vals: npt.NDArray[np.complex128],
     ) -> npt.NDArray[np.complex128]:
+        """Generates a bivector field from the given attacker and victim
+        vector spaces.
+
+
+        Args:
+            a_vals (npt.NDArray[np.complex128]): Mean and variance of attacker
+            v_vals (npt.NDArray[np.complex128]): Mean and variance of victim
+
+        Returns:
+            npt.NDArray[np.complex128]: Bivector field.
+        """
         a_x = a_vals.real
         a_y = a_vals.imag
         v_x = v_vals.real
