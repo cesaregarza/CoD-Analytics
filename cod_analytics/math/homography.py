@@ -1,8 +1,9 @@
-from typing import Callable, Concatenate, ParamSpec, TypeVar, cast
+from typing import Callable, ParamSpec, TypeVar, cast
 
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
+from typing_extensions import Self
 
 from cod_analytics.classes import TransformReference
 
@@ -82,6 +83,26 @@ class Homography:
         initial_solution = self.matrix @ points.T
         return np.delete(initial_solution, 2, axis=0).T
 
+    @staticmethod
+    def fit_transform(
+        source: npt.NDArray[np.float64],
+        target: npt.NDArray[np.float64],
+        transform_points: npt.NDArray[np.float64],
+    ) -> npt.NDArray[np.float64]:
+        """Fits the homography and transforms the points.
+
+        Args:
+            source (npt.NDArray[np.float64]): Source points.
+            target (npt.NDArray[np.float64]): Target points.
+            transform_points (npt.NDArray[np.float64]): Points to transform.
+
+        Returns:
+            npt.NDArray[np.float64]: Transformed points.
+        """
+        homography = Homography()
+        homography.fit(source, target)
+        return homography.transform(transform_points)
+
     @fitted_method
     def transform_dataframe(
         self,
@@ -151,7 +172,7 @@ class Homography:
     @staticmethod
     def from_transform_reference(
         source: TransformReference, target: TransformReference
-    ) -> "Homography":
+    ) -> Self:
         """Creates a homography from two transform references.
 
         Given two TransformReference objects, this method will separate the
@@ -167,28 +188,41 @@ class Homography:
             Homography: Homography object, already fitted.
         """
 
-        def get_points(reference: TransformReference) -> np.ndarray:
-            points = np.array(
-                [
-                    [reference["map_left"], reference["map_top"]],
-                    [reference["map_right"], reference["map_top"]],
-                    [reference["map_right"], reference["map_bottom"]],
-                    [reference["map_left"], reference["map_bottom"]],
-                ]
-            )
-            center = (
-                (reference["map_left"] + reference["map_right"]) / 2,
-                (reference["map_top"] + reference["map_bottom"]) / 2,
-            )
-            rotation = Homography.rotation_matrix(
-                reference["map_rotation"], rad=False
-            )
-            points = (points - center) @ rotation
-            return points + center
-
-        source_points = get_points(source)
-        target_points = get_points(target)
+        source_points = Homography.__transform_reference_to_points(source)
+        target_points = Homography.__transform_reference_to_points(target)
 
         homography = Homography()
         homography.fit(source_points, target_points)
         return homography
+
+    @staticmethod
+    def __transform_reference_to_points(
+        reference: TransformReference,
+    ) -> npt.NDArray[np.float64]:
+        """Converts a transform reference to points.
+
+        Args:
+            reference (TransformReference): Transform reference to convert.
+
+        Returns:
+            npt.NDArray[np.float64]: Points.
+        """
+        raw_points = np.array(
+            [
+                [reference["map_left"], reference["map_top"]],
+                [reference["map_right"], reference["map_top"]],
+                [reference["map_right"], reference["map_bottom"]],
+                [reference["map_left"], reference["map_bottom"]],
+            ]
+        )
+        center = (
+            (reference["map_left"] + reference["map_right"]) / 2,
+            (reference["map_top"] + reference["map_bottom"]) / 2,
+        )
+        try:
+            rotation = Homography.rotation_matrix(
+                reference["map_rotation"], rad=False
+            )
+        except KeyError:
+            rotation = np.eye(2)
+        return (raw_points - center) @ rotation + center

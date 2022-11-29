@@ -1,13 +1,18 @@
+from typing import Callable
+
 import numba as nb
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
 import pandera as pa
 import pandera.typing as pat
+from matplotlib import pyplot as plt
 from scipy.stats import binned_statistic_2d
 
 from cod_analytics.math.compiled_directional_functions import (
     angular_mean_cartesian,
+    angular_mean_cartesian_x,
+    angular_mean_cartesian_y,
     angular_mean_var,
     cartesian_to_polar,
     polar_to_cartesian,
@@ -64,57 +69,61 @@ class DirectionalStats:
         self.data["norm_y"] = np.sin(self.data["angle"])
 
     def generate_vector_spaces(
-        self, map_id: str, *args, **kwargs
-    ) -> tuple[
-        npt.NDArray[np.complex128],
-        npt.NDArray[np.complex128],
-        npt.NDArray[np.float64],
-        npt.NDArray[np.float64],
-    ]:
-        """Generates attacker and victim vector spaces for the given map.
-
-        Args:
-            map_id (str): Map ID.
+        self, *args, **kwargs
+    ) -> "VectorSpaceResults":
+        """Generates attacker and victim vector spaces for the given map. Passes
+        any additional arguments via args and kwargs to SciPy's
+        binned_statistic_2d.
 
         Returns:
-            tuple:
-                npt.NDArray[np.complex128]: Mean and variance of attacker
-                    vectors along bins. Real part is the mean angle in radians,
-                    imaginary part is the vector variance.
-                npt.NDArray[np.complex128]: Mean and variance of victim vectors
-                    along bins. Real part is the mean angle in radians,
-                    imaginary part is the vector variance.
-                npt.NDArray[np.float64]: Bin edges along the x-axis.
-                npt.NDArray[np.float64]: Bin edges along the y-axis.
+            VectorSpaceResults: Results of the vector space generation.
         """
-        mask = self.data["map_id"] == map_id
-        data = self.data.loc[mask, :]
+        data = self.data.copy()
         x_max = data[["ax", "vx"]].max().max()
         x_min = data[["ax", "vx"]].min().min()
         y_max = data[["ay", "vy"]].max().max()
         y_min = data[["ay", "vy"]].min().min()
-        a_vals, x_edges, y_edges, _ = binned_statistic_2d(
-            data["ax"],
-            data["ay"],
-            data["angle"],
-            statistic=angular_mean_cartesian,
-            range=[[x_min, x_max], [y_min, y_max]],
-            *args,
-            **kwargs,
-        )
-        v_vals, _, _, _ = binned_statistic_2d(
-            data["vx"],
-            data["vy"],
-            -data["angle"],
-            statistic=angular_mean_cartesian,
-            range=[[x_min, x_max], [y_min, y_max]],
-            *args,
-            **kwargs,
-        )
-        return (a_vals, v_vals, x_edges, y_edges)
 
+        def binned_stat_part(statistic: Callable, av: str):
+            if av == "a":
+                val = 1
+            elif av == "v":
+                val = -1
+            else:
+                raise ValueError(f"Invalid av: {av}")
+            return binned_statistic_2d(
+                data[av + "y"],
+                data[av + "x"],
+                data["angle"] * val,
+                *args,
+                statistic=statistic,
+                range=[[x_min, x_max], [y_min, y_max]],
+                **kwargs,
+            )
+
+        try:
+            a_vals, x_edges, y_edges, _ = binned_stat_part(
+                angular_mean_cartesian, "a"
+            )
+            v_vals, _, _, _ = binned_stat_part(angular_mean_cartesian, "v")
+        except TypeError:  # TODO: Remove this once SciPy 1.10.0 is released
+            a_vals_x, x_edges, y_edges, _ = binned_stat_part(
+                angular_mean_cartesian_x, "a"
+            )
+            ret = binned_stat_part(angular_mean_cartesian_x, "a")
+            a_vals_x = ret.statistic
+            x_edges, y_edges = ret.x_edge, ret.y_edge
+            a_vals_y = binned_stat_part(angular_mean_cartesian_y, "a").statistic
+            a_vals = a_vals_x + 1j * a_vals_y
+
+            v_vals_x = binned_stat_part(angular_mean_cartesian_x, "v").statistic
+            v_vals_y = binned_stat_part(angular_mean_cartesian_y, "v").statistic
+            v_vals = v_vals_x + 1j * v_vals_y
+
+        return VectorSpaceResults(a_vals, v_vals, x_edges, y_edges)
+
+    @staticmethod
     def generate_bivector_field(
-        self,
         a_vals: npt.NDArray[np.complex128],
         v_vals: npt.NDArray[np.complex128],
     ) -> npt.NDArray[np.complex128]:
@@ -139,3 +148,54 @@ class DirectionalStats:
         dot = np.einsum("ij, ij->i", a_vectors, v_vectors)
         wedge = wedge_many(a_vectors, v_vectors)
         return dot + 1j * wedge
+
+
+class VectorSpaceResults:
+    def __init__(
+        self,
+        a_vals: npt.NDArray[np.complex128],
+        v_vals: npt.NDArray[np.complex128],
+        x_edges: npt.NDArray[np.float64],
+        y_edges: npt.NDArray[np.float64],
+    ) -> None:
+        self.a_vals = a_vals
+        self.v_vals = v_vals
+        self.x_edges = x_edges
+        self.y_edges = y_edges
+
+        self.a_x = a_vals.real
+        self.a_y = a_vals.imag
+        self.v_x = v_vals.real
+        self.v_y = v_vals.imag
+        self.bin_centers_x = (x_edges[1:] + x_edges[:-1]) / 2
+        self.bin_centers_y = (y_edges[1:] + y_edges[:-1]) / 2
+        self.bin_size_x = x_edges[1] - x_edges[0]
+        self.bin_size_y = y_edges[1] - y_edges[0]
+
+    def generate_bivector_field(self) -> npt.NDArray[np.complex128]:
+        a_vectors = np.column_stack([self.a_x, self.a_y])
+        v_vectors = np.column_stack([self.v_x, self.v_y])
+        dot = np.einsum("ij, ij->i", a_vectors, v_vectors)
+        wedge = wedge_many(a_vectors, v_vectors)
+        return dot + 1j * wedge
+
+    def plot_vector_field(self, ax: plt.Axes, av: str, **kwargs) -> None:
+        if av == "a":
+            x = self.a_x
+            y = self.a_y
+        elif av == "v":
+            x = self.v_x
+            y = self.v_y
+        else:
+            raise ValueError(f"Invalid av: {av}")
+        ax.quiver(self.bin_centers_x, self.bin_centers_y, x, y, **kwargs)
+
+    def plot_bivector_field(self, ax: plt.Axes, **kwargs) -> None:
+        bivector_field = self.generate_bivector_field()
+        ax.quiver(
+            self.bin_centers_x,
+            self.bin_centers_y,
+            bivector_field.real,
+            bivector_field.imag,
+            **kwargs,
+        )

@@ -171,6 +171,39 @@ def angular_mean_cartesian(theta: npt.NDArray[np.float64]) -> complex:
         complex: Cartesian mean of projected angles, x+yi. Mean is calculated by
             atan2(y, x). Variance is calculated by sqrt(x ** 2 + y ** 2).
     """
+    if len(theta) == 0:
+        return 0 + 1j * 0
+
     x = np.mean(np.cos(theta))
     y = np.mean(np.sin(theta))
     return x + 1j * y
+
+
+@nb.njit(nb.float64(nb.float64[:]))
+def angular_mean_cartesian_x(theta: npt.NDArray[np.float64]) -> float:
+    """Calculates the mean of a set of angles, in cartesian
+
+    Args:
+        theta (npt.NDArray[np.float64]): Array of angles.
+
+    Returns:
+        float: Cartesian mean of projected angles, x.
+    """
+    if len(theta) == 0:
+        return 0
+    return np.mean(np.cos(theta))
+
+
+@nb.njit(nb.float64(nb.float64[:]))
+def angular_mean_cartesian_y(theta: npt.NDArray[np.float64]) -> float:
+    """Calculates the mean of a set of angles, in cartesian
+
+    Args:
+        theta (npt.NDArray[np.float64]): Array of angles.
+
+    Returns:
+        float: Cartesian mean of projected angles, y.
+    """
+    if len(theta) == 0:
+        return 0
+    return np.mean(np.sin(theta))
