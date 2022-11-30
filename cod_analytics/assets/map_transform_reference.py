@@ -1,6 +1,7 @@
+import numpy as np
+
 from cod_analytics.classes import TransformReference
 from cod_analytics.math.homography import Homography
-import numpy as np
 
 
 class MapCalibrationReference:
@@ -80,7 +81,9 @@ class MapCalibrationReference:
         points = np.array(getattr(MapCalibrationReference, map_id))
         source_points = points[:, 0, :]
         target_points = points[:, 1, :]
-        return Homography.fit(source_points, target_points)
+        hom = Homography()
+        hom.fit(source_points, target_points)
+        return hom
 
 
 class MapSourceOfTruthPoints:

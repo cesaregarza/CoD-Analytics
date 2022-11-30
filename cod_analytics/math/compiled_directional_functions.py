@@ -179,31 +179,45 @@ def angular_mean_cartesian(theta: npt.NDArray[np.float64]) -> complex:
     return x + 1j * y
 
 
-@nb.njit(nb.float64(nb.float64[:]))
-def angular_mean_cartesian_x(theta: npt.NDArray[np.float64]) -> float:
+@nb.njit(nb.float64(nb.float64[:], nb.int64))
+def angular_mean_cartesian_x(
+    theta: npt.NDArray[np.float64], min_points: int = 0
+) -> float:
     """Calculates the mean of a set of angles, in cartesian
 
     Args:
         theta (npt.NDArray[np.float64]): Array of angles.
+        min_points (int): Minimum number of points to calculate the mean.
+            Reduces the side effects of unfortunate binning. If zero, no
+            minimum is enforced. Defaults to 0.
 
     Returns:
         float: Cartesian mean of projected angles, x.
     """
-    if len(theta) == 0:
-        return 0
+    condition_1 = len(theta) == 0
+    condition_2 = (len(theta) < min_points) and (min_points > 0)
+    if condition_1 or condition_2:
+        return np.nan
     return np.mean(np.cos(theta))
 
 
-@nb.njit(nb.float64(nb.float64[:]))
-def angular_mean_cartesian_y(theta: npt.NDArray[np.float64]) -> float:
+@nb.njit(nb.float64(nb.float64[:], nb.int64))
+def angular_mean_cartesian_y(
+    theta: npt.NDArray[np.float64], min_points: int = 0
+) -> float:
     """Calculates the mean of a set of angles, in cartesian
 
     Args:
         theta (npt.NDArray[np.float64]): Array of angles.
+        min_points (int): Minimum number of points to calculate the mean.
+            Reduces the side effects of unfortunate binning. If zero, no
+            minimum is enforced. Defaults to 0.
 
     Returns:
         float: Cartesian mean of projected angles, y.
     """
-    if len(theta) == 0:
-        return 0
+    condition_1 = len(theta) == 0
+    condition_2 = (len(theta) < min_points) and (min_points > 0)
+    if condition_1 or condition_2:
+        return np.nan
     return np.mean(np.sin(theta))

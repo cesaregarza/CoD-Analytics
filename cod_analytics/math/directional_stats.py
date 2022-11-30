@@ -1,3 +1,4 @@
+from functools import partial
 from typing import Callable
 
 import numba as nb
@@ -6,6 +7,7 @@ import numpy.typing as npt
 import pandas as pd
 import pandera as pa
 import pandera.typing as pat
+from matplotlib import patches
 from matplotlib import pyplot as plt
 from scipy.stats import binned_statistic_2d
 
@@ -18,7 +20,7 @@ from cod_analytics.math.compiled_directional_functions import (
     polar_to_cartesian,
     project_to_unit_circle,
 )
-from cod_analytics.math.diff_geo import wedge_many
+from cod_analytics.math.diff_geo import wedge_field
 
 
 @nb.njit(nb.float64(nb.float64[:]))
@@ -69,11 +71,15 @@ class DirectionalStats:
         self.data["norm_y"] = np.sin(self.data["angle"])
 
     def generate_vector_spaces(
-        self, *args, **kwargs
+        self, min_points: int = 0, *args, **kwargs
     ) -> "VectorSpaceResults":
         """Generates attacker and victim vector spaces for the given map. Passes
         any additional arguments via args and kwargs to SciPy's
         binned_statistic_2d.
+
+        Args:
+            min_points (int, optional): Minimum number of points in a bin to
+                include it in the results. Defaults to 0.
 
         Returns:
             VectorSpaceResults: Results of the vector space generation.
@@ -86,15 +92,15 @@ class DirectionalStats:
 
         def binned_stat_part(statistic: Callable, av: str):
             if av == "a":
-                val = 1
+                angle = data["angle"]
             elif av == "v":
-                val = -1
+                angle = data["angle"] + np.pi
             else:
                 raise ValueError(f"Invalid av: {av}")
             return binned_statistic_2d(
-                data[av + "y"],
                 data[av + "x"],
-                data["angle"] * val,
+                data[av + "y"],
+                angle,
                 *args,
                 statistic=statistic,
                 range=[[x_min, x_max], [y_min, y_max]],
@@ -107,50 +113,30 @@ class DirectionalStats:
             )
             v_vals, _, _, _ = binned_stat_part(angular_mean_cartesian, "v")
         except TypeError:  # TODO: Remove this once SciPy 1.10.0 is released
-            a_vals_x, x_edges, y_edges, _ = binned_stat_part(
-                angular_mean_cartesian_x, "a"
+            amcx_partial = partial(
+                angular_mean_cartesian_x, min_points=min_points
             )
-            ret = binned_stat_part(angular_mean_cartesian_x, "a")
+            amcy_partial = partial(
+                angular_mean_cartesian_y, min_points=min_points
+            )
+            ret = binned_stat_part(amcx_partial, "a")
             a_vals_x = ret.statistic
             x_edges, y_edges = ret.x_edge, ret.y_edge
-            a_vals_y = binned_stat_part(angular_mean_cartesian_y, "a").statistic
+            a_vals_y = binned_stat_part(amcy_partial, "a").statistic
             a_vals = a_vals_x + 1j * a_vals_y
 
-            v_vals_x = binned_stat_part(angular_mean_cartesian_x, "v").statistic
-            v_vals_y = binned_stat_part(angular_mean_cartesian_y, "v").statistic
+            v_vals_x = binned_stat_part(amcx_partial, "v").statistic
+            v_vals_y = binned_stat_part(amcy_partial, "v").statistic
             v_vals = v_vals_x + 1j * v_vals_y
 
         return VectorSpaceResults(a_vals, v_vals, x_edges, y_edges)
 
-    @staticmethod
-    def generate_bivector_field(
-        a_vals: npt.NDArray[np.complex128],
-        v_vals: npt.NDArray[np.complex128],
-    ) -> npt.NDArray[np.complex128]:
-        """Generates a bivector field from the given attacker and victim
-        vector spaces.
-
-
-        Args:
-            a_vals (npt.NDArray[np.complex128]): Mean and variance of attacker
-            v_vals (npt.NDArray[np.complex128]): Mean and variance of victim
-
-        Returns:
-            npt.NDArray[np.complex128]: Bivector field.
-        """
-        a_x = a_vals.real
-        a_y = a_vals.imag
-        v_x = v_vals.real
-        v_y = v_vals.imag
-
-        a_vectors = np.column_stack([a_x, a_y])
-        v_vectors = np.column_stack([v_x, v_y])
-        dot = np.einsum("ij, ij->i", a_vectors, v_vectors)
-        wedge = wedge_many(a_vectors, v_vectors)
-        return dot + 1j * wedge
-
 
 class VectorSpaceResults:
+    """Class for storing the results of vector space generation, including
+    methods for plotting the results and computing the geometric product of
+    the input vector spaces."""
+
     def __init__(
         self,
         a_vals: npt.NDArray[np.complex128],
@@ -158,6 +144,14 @@ class VectorSpaceResults:
         x_edges: npt.NDArray[np.float64],
         y_edges: npt.NDArray[np.float64],
     ) -> None:
+        """Initializes the VectorSpaceResults class.
+
+        Args:
+            a_vals (npt.NDArray[np.complex128]): Mean and variance of attacker
+            v_vals (npt.NDArray[np.complex128]): Mean and variance of victim
+            x_edges (npt.NDArray[np.float64]): x edges of the bins
+            y_edges (npt.NDArray[np.float64]): y edges of the bins
+        """
         self.a_vals = a_vals
         self.v_vals = v_vals
         self.x_edges = x_edges
@@ -172,30 +166,90 @@ class VectorSpaceResults:
         self.bin_size_x = x_edges[1] - x_edges[0]
         self.bin_size_y = y_edges[1] - y_edges[0]
 
-    def generate_bivector_field(self) -> npt.NDArray[np.complex128]:
-        a_vectors = np.column_stack([self.a_x, self.a_y])
-        v_vectors = np.column_stack([self.v_x, self.v_y])
-        dot = np.einsum("ij, ij->i", a_vectors, v_vectors)
-        wedge = wedge_many(a_vectors, v_vectors)
+    def geometric_product_fields(self) -> npt.NDArray[np.complex128]:
+        """Generates the geometric product of the attacker and victim vector.
+
+        Given two (n, m) complex arrays, a and v, representing the angular mean
+        and variance of the attacker and victim vector spaces, respectively,
+        this function returns a (n, m) complex array representing the
+        multivector field of the geometric product between the attacker and
+        victim vector spaces.
+
+        Returns:
+            npt.NDArray[np.complex128]: Bivector field.
+        """
+        a_vectors = np.stack([self.a_x, self.a_y], axis=-1)
+        v_vectors = np.stack([self.v_x, self.v_y], axis=-1)
+        dot = np.einsum("ijk,ijk->ij", a_vectors, v_vectors)
+        wedge = wedge_field(a_vectors, v_vectors)
         return dot + 1j * wedge
 
     def plot_vector_field(self, ax: plt.Axes, av: str, **kwargs) -> None:
+        """Plots the vector field for the given attacker or victim vector.
+
+        Kwargs are passed directly to matplotlib.pyplot.quiver, with the
+        following keyword arguments as defaults:
+            "scale_units": "xy",
+            "angles": "xy",
+            "color": "red" if av == "a" else "blue",
+            "pivot": "tail" if av == "a" else "tip",
+            "scale": 1 / minimum bin size,
+
+        Args:
+            ax (plt.Axes): Axes to plot on.
+            av (str): "a" for attacker, "v" for victim.
+
+        Raises:
+            ValueError: If av is not "a" or "v".
+        """
+        default_kwargs = {
+            "scale_units": "xy",
+            "angles": "xy",
+        }
+        default_kwargs.update(kwargs)
         if av == "a":
-            x = self.a_x
-            y = self.a_y
+            u = self.a_x
+            v = self.a_y
+            default_kwargs["pivot"] = kwargs.get("pivot", "tail")
+            default_kwargs["color"] = kwargs.get("color", "red")
         elif av == "v":
-            x = self.v_x
-            y = self.v_y
+            u = -self.v_x
+            v = -self.v_y
+            default_kwargs["pivot"] = kwargs.get("pivot", "tip")
+            default_kwargs["color"] = kwargs.get("color", "blue")
         else:
             raise ValueError(f"Invalid av: {av}")
-        ax.quiver(self.bin_centers_x, self.bin_centers_y, x, y, **kwargs)
+
+        # normalize u and v to the bin size
+        if "scale" not in default_kwargs:
+            min_bin = min(self.bin_size_x, self.bin_size_y)
+            default_kwargs["scale"] = 1 / (min_bin)
+        x, y = np.meshgrid(
+            self.bin_centers_x, self.bin_centers_y, indexing="ij"
+        )
+        # Draw centers of bins
+        ax.scatter(x, y, c="green", s=1)
+        # Draw bins
+        for i in range(x.shape[0]):
+            for j in range(x.shape[1]):
+                anchor_x = x[i, j] - self.bin_size_x / 2
+                anchor_y = y[i, j] - self.bin_size_y / 2
+                patch = patches.Rectangle(
+                    (anchor_x, anchor_y),
+                    self.bin_size_x,
+                    self.bin_size_y,
+                    color="black",
+                    fill=False,
+                )
+                ax.add_patch(patch)
+        # Draw vector field
+        ax.quiver(x, y, u, v, **default_kwargs)
 
     def plot_bivector_field(self, ax: plt.Axes, **kwargs) -> None:
         bivector_field = self.generate_bivector_field()
-        ax.quiver(
-            self.bin_centers_x,
-            self.bin_centers_y,
-            bivector_field.real,
-            bivector_field.imag,
-            **kwargs,
+        x, y = np.meshgrid(
+            self.bin_centers_x, self.bin_centers_y, indexing="ij"
         )
+        u = bivector_field.real * self.bin_size_x / 2
+        v = bivector_field.imag * self.bin_size_y / 2
+        ax.quiver(x, y, u, v, angles="xy", **kwargs)

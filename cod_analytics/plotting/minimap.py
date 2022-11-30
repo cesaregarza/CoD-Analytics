@@ -1,7 +1,8 @@
+import numpy as np
+from matplotlib import pyplot as plt
+
 from cod_analytics.assets import asset_path
 from cod_analytics.assets.map_images import MapPathRemap
-from matplotlib import pyplot as plt
-import numpy as np
 
 
 def retrieve_minimap_image(map_id: str) -> np.ndarray:
