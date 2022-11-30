@@ -7,18 +7,15 @@ import numpy.typing as npt
 import pandas as pd
 import pandera as pa
 import pandera.typing as pat
-from matplotlib import patches
+from matplotlib import cm, patches
 from matplotlib import pyplot as plt
+from matplotlib.colors import Normalize
 from scipy.stats import binned_statistic_2d
 
 from cod_analytics.math.compiled_directional_functions import (
     angular_mean_cartesian,
     angular_mean_cartesian_x,
     angular_mean_cartesian_y,
-    angular_mean_var,
-    cartesian_to_polar,
-    polar_to_cartesian,
-    project_to_unit_circle,
 )
 from cod_analytics.math.diff_geo import wedge_field
 
@@ -166,7 +163,7 @@ class VectorSpaceResults:
         self.bin_size_x = x_edges[1] - x_edges[0]
         self.bin_size_y = y_edges[1] - y_edges[0]
 
-    def geometric_product_fields(self) -> npt.NDArray[np.complex128]:
+    def geometric_product_field(self) -> npt.NDArray[np.complex128]:
         """Generates the geometric product of the attacker and victim vector.
 
         Given two (n, m) complex arrays, a and v, representing the angular mean
@@ -245,11 +242,63 @@ class VectorSpaceResults:
         # Draw vector field
         ax.quiver(x, y, u, v, **default_kwargs)
 
-    def plot_bivector_field(self, ax: plt.Axes, **kwargs) -> None:
-        bivector_field = self.generate_bivector_field()
-        x, y = np.meshgrid(
-            self.bin_centers_x, self.bin_centers_y, indexing="ij"
+    def plot_geometric_product_field(
+        self, ax: plt.Axes, resize: int = 0.4, **kwargs
+    ) -> None:
+        """Plots the geometric product field.
+
+        This plot is much more difficult to interpret than the individual
+        attacker and victim vector fields. The color is a cyclical colormap that
+        maps the relative direction between the attacker and victim vectors. The
+        alpha increases with the magnitude. The real component of the geometric
+        product indicates "overlap" between the attacker and victim vectors,
+        while the imaginary component indicates "orthogonality". The magnitude
+        of the geometric product is proportional to the "inverse variance"
+        (1 - variance) of the attacker and victim vectors. The geometric product
+        field is naturally normalized, the maximum magnitude cannot exceed 1.
+
+        Args:
+            ax (plt.Axes): Axes to plot on.
+            resize (int, optional): Resize factor for the plot. Defaults to 0.4.
+        """
+        default_kwargs = {}
+        default_kwargs.update(kwargs)
+        gp_field = self.geometric_product_field()
+        magnitude = np.abs(gp_field)
+        angle = (np.angle(gp_field) / (2 * np.pi)) % 1 * 360
+
+        # Draw bins with color as the fill
+        # Reduce bin size by 60% for aesthetic reasons
+        bin_size_x = self.bin_size_x * resize
+        bin_size_y = self.bin_size_y * resize
+        anchor_offset_x = (self.bin_size_x - bin_size_x) / 2
+        anchor_offset_y = (self.bin_size_y - bin_size_y) / 2
+        for i in range(angle.shape[0]):
+            for j in range(angle.shape[1]):
+                # Skip if magnitude is 0
+                if np.isnan(magnitude[i, j]):
+                    continue
+                anchor_x = self.x_edges[i] + anchor_offset_x
+                anchor_y = self.y_edges[j] + anchor_offset_y
+                patch = patches.Rectangle(
+                    (anchor_x, anchor_y),
+                    bin_size_x,
+                    bin_size_y,
+                    color=cm.twilight(angle[i, j]),
+                    alpha=min(magnitude[i, j] + 0.1, 1),
+                    fill=True,
+                    **default_kwargs,
+                )
+                ax.add_patch(patch)
+
+        # Generate a colorbar legend
+        cb = cm.ScalarMappable(
+            norm=Normalize(vmin=0, vmax=360), cmap="twilight"
         )
-        u = bivector_field.real * self.bin_size_x / 2
-        v = bivector_field.imag * self.bin_size_y / 2
-        ax.quiver(x, y, u, v, angles="xy", **kwargs)
+        plt.colorbar(
+            cb,
+            ax=ax,
+            fraction=0.046,
+            pad=0.04,
+            label="Attacker/Victim Angle Difference",
+        )
