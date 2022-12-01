@@ -4,9 +4,47 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 
+from cod_analytics.assets.map_images import MapRemap, MapRemapSimple
 from cod_analytics.classes import TransformReference
 from cod_analytics.constants import ENG_COLUMN_ORDER
 from cod_analytics.math.homography import Homography
+
+
+def parse_map_id(map_id: str) -> str:
+    """Parse a map ID and return the map name.
+
+    Attempts to find the map name through various methods. First, it checks if
+    the map ID is a simple map name. If not, it checks if the map ID is the
+    proper map name. If not, it finally checks if the map ID is a direct map.
+    If none of these are true, it raises a ValueError.
+
+    Args:
+        map_id (str): The map ID to parse. Can be a simple map name, a proper
+            map name, or a direct map ID.
+
+    Raises:
+        ValueError: If the map ID is not a simple map name, a proper map name,
+            or a direct map ID.
+
+    Returns:
+        str: The associated map ID.
+    """
+    try:
+        return MapRemapSimple.remap(map_id)
+    except KeyError:
+        pass
+
+    try:
+        return MapRemap.remap(map_id, reverse=True)
+    except KeyError:
+        pass
+
+    try:
+        MapRemap.remap(map_id)
+    except KeyError:
+        raise ValueError(f"Invalid map ID: {map_id}")
+
+    return map_id
 
 
 def parse_match_events(

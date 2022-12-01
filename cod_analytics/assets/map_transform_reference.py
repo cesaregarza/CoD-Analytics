@@ -90,36 +90,36 @@ class MapCalibrationReference:
 
 
 class MapSourceOfTruthPoints:
-    mp_aniyah_tac = TransformReference(
+    mp_aniyah_tac = TransformReference( # Scale seems wrong
         map_left=-1275, map_right=6725, map_top=-3215, map_bottom=4785
     )
-    mp_backlot2 = TransformReference(
-        map_left=-2488, map_right=3212, map_top=-2862, map_bottom=2838
+    mp_backlot2 = TransformReference( # Scale is definitely wrong
+        map_left=-2488, map_right=3212, map_top=-2862, map_bottom=2838, map_rotation=90.0
     )
-    mp_broadcast2 = TransformReference(
+    mp_broadcast2 = TransformReference( # Scale seems right, translated greatly
         map_left=-6329, map_right=3714, map_top=-2130, map_bottom=7913
     )
     mp_cave_am = TransformReference(
         map_left=-3760, map_right=5100, map_top=-3670, map_bottom=5190
     )
     mp_crash2 = TransformReference(
-        map_left=-2655, map_right=3335, map_top=-2845, map_bottom=3145
+        map_left=-2655, map_right=3335, map_top=-2845, map_bottom=3145, map_rotation=90.0
     )
     mp_deadzone = TransformReference(
-        map_left=-6130, map_right=6140, map_top=-6152, map_bottom=6118
+        map_left=-6130, map_right=6140, map_top=-6152, map_bottom=6118, map_rotation=90.0
     )
-    mp_emporium = TransformReference(
-        map_left=-3765, map_right=4005, map_top=-4055, map_bottom=3715
+    mp_emporium = TransformReference( # Scale is wrong
+        map_left=-3765, map_right=4005, map_top=-4055, map_bottom=3715, map_rotation=270.0
     )
-    mp_garden = TransformReference(
+    mp_garden = TransformReference( # Needs minor scaling. 
         map_left=-4080,
         map_right=3820,
         map_top=-4220,
         map_bottom=3680,
-        map_rotation=180.0,
+        map_rotation=270.0,
     )
     mp_hackney_am = TransformReference(
-        map_left=-2780, map_right=3540, map_top=-3310, map_bottom=3010
+        map_left=-2780, map_right=3540, map_top=-3310, map_bottom=3010, map_rotation=90.0
     )
     mp_harbor = TransformReference(
         map_left=-2230, map_right=6130, map_top=-5120, map_bottom=3240
@@ -138,7 +138,7 @@ class MapSourceOfTruthPoints:
         map_rotation=90.0,
     )
     mp_m_speed = TransformReference(
-        map_left=-3560, map_right=2010, map_top=-1000, map_bottom=4570
+        map_left=-3560, map_right=2010, map_top=-1000, map_bottom=4570, map_rotation=90.0
     )
     mp_malyshev = TransformReference(
         map_left=-6329, map_right=3714, map_top=-2130, map_bottom=7913
@@ -190,13 +190,13 @@ class MapSourceOfTruthPoints:
 
 
 def retrieve_minimap_image(map_id: str) -> np.ndarray:
-    """Retrieve the minimap image for a given map_id
+    """Retrieve the minimap image for a given map_id as a numpy array.
 
     Args:
         map_id (str): The map_id to retrieve the minimap for
 
     Returns:
-        plt.Axes: The minimap image
+        np.ndarray: The minimap image as a numpy array
     """
 
     image_path = asset_path / "map_images" / MapPathRemap.remap(map_id)
