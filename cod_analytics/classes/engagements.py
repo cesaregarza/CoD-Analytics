@@ -11,6 +11,7 @@ from cod_analytics.math.directional_stats import (
 )
 from cod_analytics.math.homography import HomographyCorrection
 from cod_analytics.parser.parsers import parse_map_id
+from cod_analytics.assets.map_images import MapRemap
 
 T = TypeVar("T")
 P = ParamSpec("P")
@@ -144,14 +145,20 @@ class MapEngagements:
         )
         self.generated_spaces = True
 
-    def initialize_plot(self, **kwargs) -> tuple[plt.Figure, plt.Axes]:
+    def initialize_plot(self, include_title: bool = True, **kwargs) -> tuple[plt.Figure, plt.Axes]:
         """Initialize the plot.
+
+        Args:
+            include_title (bool, optional): Whether to include the map title.
 
         Returns:
             tuple[plt.Figure, plt.Axes]: Figure and axes.
         """
         fig, ax = plt.subplots(**kwargs)
         ax.imshow(self.map.image)
+        if include_title:
+            plt.text(100, 100, s=MapRemap.remap(self.map_id), fontsize=31, color="black")
+            plt.text(100, 100, s=MapRemap.remap(self.map_id), fontsize=30, color="white")
         return fig, ax
 
     @vector_space_method

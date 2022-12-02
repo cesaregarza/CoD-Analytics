@@ -4,7 +4,7 @@ from cod_analytics.classes import RemapClass
 class MapRemap(RemapClass):
     mp_deadzone = "Arklov Peak"
     mp_aniyah_tac = "Aniyah Incursion"
-    mp_hackney_am = "Hackey Yard"
+    mp_hackney_am = "Hackney Yard"
     mp_backlot2 = "Talsik Backlot"
     mp_runner = "Gun Runner"
     mp_scrapyard = "Scrapyard"
