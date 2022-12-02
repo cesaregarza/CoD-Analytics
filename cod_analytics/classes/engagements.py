@@ -66,7 +66,7 @@ class MapEngagements:
         maxs = self.t_df[["ax", "ay"]].max()
         mins = self.t_df[["ax", "ay"]].min()
         return (maxs["ax"] + mins["ax"]) / 2, (maxs["ay"] + mins["ay"]) / 2
-    
+
     def centerize(self, center: tuple[float, float]) -> None:
         """Centerize the map.
 

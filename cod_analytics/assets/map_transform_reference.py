@@ -244,6 +244,70 @@ class MapCorrections:
         rotate=90.0,
         rad=False,
     )
+    mp_harbor = HomographyCorrection(
+        center=(512, 512),
+        translate=(0, -26),
+        rotate=90.0,
+        rad=False,
+    )
+    mp_hardhat = HomographyCorrection(
+        center=(512, 512),
+        translate=(-26, -30),
+    )
+    mp_hideout = HomographyCorrection(
+        scale=0.725,
+        center=(512, 512),
+        translate=(0, 5),
+        rotate=270.0,
+        rad=False,
+    )
+    mp_killhouse = HomographyCorrection(
+        center=(512, 512),
+        rotate=270.0,
+        rad=False,
+    )
+    mp_malyshev = HomographyCorrection(
+        center=(512, 512),
+        rotate=90.0,
+        rad=False,
+    )
+    mp_oilrig = HomographyCorrection(
+        center=(512, 512),
+        translate=(-3, 3),
+        rotate=270.0,
+        rad=False,
+    )
+    mp_petrograd = HomographyCorrection(
+        center=(512, 512),
+        rotate=90.0,
+        rad=False,
+    )
+    mp_scrapyard = HomographyCorrection(
+        scale=0.71,
+        center=(512, 512),
+        translate=(-5, -8),
+        rotate=240.0,
+        rad=False,
+    )
+    mp_spear = HomographyCorrection(
+        center=(512, 512),
+        rotate=90.0,
+        rad=False,
+    )
+    mp_vacant = HomographyCorrection(
+        scale=0.83,
+        center=(512, 512),
+        translate=(35, 15),
+        rotate=45.0,
+        rad=False,
+    )
+    mp_village2 = HomographyCorrection(
+        scale=0.83,
+        center=(512, 512),
+        translate=(10, -10),
+        rotate=90.0,
+        rad=False,
+    )
 
     @staticmethod
     def get(map_id: str) -> HomographyCorrection:
