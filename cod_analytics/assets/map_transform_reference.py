@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 from cod_analytics.assets import asset_path
 from cod_analytics.assets.map_images import MapPathRemap
 from cod_analytics.classes import TransformReference
-from cod_analytics.math.homography import Homography
+from cod_analytics.math.homography import Homography, HomographyCorrection
 
 
 class MapCalibrationReference:
@@ -84,42 +84,58 @@ class MapCalibrationReference:
         points = np.array(getattr(MapCalibrationReference, map_id))
         source_points = points[:, 0, :]
         target_points = points[:, 1, :]
+        target_points[:, 1] = 1024 - target_points[:, 1]
         hom = Homography()
         hom.fit(source_points, target_points)
         return hom
 
 
 class MapSourceOfTruthPoints:
-    mp_aniyah_tac = TransformReference( # Scale seems wrong
+    mp_aniyah_tac = TransformReference(  # Scale seems wrong
         map_left=-1275, map_right=6725, map_top=-3215, map_bottom=4785
     )
-    mp_backlot2 = TransformReference( # Scale is definitely wrong
-        map_left=-2488, map_right=3212, map_top=-2862, map_bottom=2838, map_rotation=90.0
+    mp_backlot2 = TransformReference(  # Scale is definitely wrong
+        map_left=-2488,
+        map_right=3212,
+        map_top=-2862,
+        map_bottom=2838,
     )
-    mp_broadcast2 = TransformReference( # Scale seems right, translated greatly
+    mp_broadcast2 = TransformReference(  # Scale seems right, translated greatly
         map_left=-6329, map_right=3714, map_top=-2130, map_bottom=7913
     )
     mp_cave_am = TransformReference(
         map_left=-3760, map_right=5100, map_top=-3670, map_bottom=5190
     )
     mp_crash2 = TransformReference(
-        map_left=-2655, map_right=3335, map_top=-2845, map_bottom=3145, map_rotation=90.0
+        map_left=-2655,
+        map_right=3335,
+        map_top=-2845,
+        map_bottom=3145,
     )
     mp_deadzone = TransformReference(
-        map_left=-6130, map_right=6140, map_top=-6152, map_bottom=6118, map_rotation=90.0
+        map_left=-6130,
+        map_right=6140,
+        map_top=-6152,
+        map_bottom=6118,
     )
-    mp_emporium = TransformReference( # Scale is wrong
-        map_left=-3765, map_right=4005, map_top=-4055, map_bottom=3715, map_rotation=270.0
+    mp_emporium = TransformReference(  # Scale is wrong
+        map_left=-3765,
+        map_right=4005,
+        map_top=-4055,
+        map_bottom=3715,
     )
-    mp_garden = TransformReference( # Needs minor scaling. 
+    mp_garden = TransformReference(  # Needs minor scaling.
         map_left=-4080,
         map_right=3820,
         map_top=-4220,
         map_bottom=3680,
-        map_rotation=270.0,
+        map_rotation=180.0,
     )
     mp_hackney_am = TransformReference(
-        map_left=-2780, map_right=3540, map_top=-3310, map_bottom=3010, map_rotation=90.0
+        map_left=-2780,
+        map_right=3540,
+        map_top=-3310,
+        map_bottom=3010,
     )
     mp_harbor = TransformReference(
         map_left=-2230, map_right=6130, map_top=-5120, map_bottom=3240
@@ -138,7 +154,11 @@ class MapSourceOfTruthPoints:
         map_rotation=90.0,
     )
     mp_m_speed = TransformReference(
-        map_left=-3560, map_right=2010, map_top=-1000, map_bottom=4570, map_rotation=90.0
+        map_left=-3560,
+        map_right=2010,
+        map_top=-1000,
+        map_bottom=4570,
+        map_rotation=90.0,
     )
     mp_malyshev = TransformReference(
         map_left=-6329, map_right=3714, map_top=-2130, map_bottom=7913
@@ -187,6 +207,49 @@ class MapSourceOfTruthPoints:
         if not hasattr(MapSourceOfTruthPoints, map_id):
             raise ValueError(f"Map {map_id} not found")
         return getattr(MapSourceOfTruthPoints, map_id)
+
+
+class MapCorrections:
+    mp_aniyah_tac = HomographyCorrection(
+        scale=(0.845, 0.8512), translate=(2.0, -10.0), center=(512, 512)
+    )
+    mp_backlot2 = HomographyCorrection(
+        scale=0.77,
+        center=(512, 512),
+        translate=(-20, -38),
+        rotate=90.0,
+        rad=False,
+    )
+    mp_broadcast2 = HomographyCorrection(
+        scale=1.243,
+        center=(512, 512),
+        translate=(-1921, 1963),
+    )
+    mp_emporium = HomographyCorrection(
+        scale=(0.79, 0.81),
+        center=(512, 512),
+        translate=(8, -15),
+        rotate=270.0,
+        rad=False,
+    )
+    mp_garden = HomographyCorrection(
+        scale=1.03,
+        center=(512, 512),
+        translate=(-3, 0),
+        rotate=90.0,
+        rad=False,
+    )
+    mp_hackney_am = HomographyCorrection(
+        center=(512, 512),
+        rotate=90.0,
+        rad=False,
+    )
+
+    @staticmethod
+    def get(map_id: str) -> HomographyCorrection:
+        if not hasattr(MapCorrections, map_id):
+            return HomographyCorrection()
+        return getattr(MapCorrections, map_id)
 
 
 def retrieve_minimap_image(map_id: str) -> np.ndarray:

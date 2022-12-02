@@ -1,14 +1,15 @@
 from typing import Callable, ParamSpec, TypeVar, cast
 
 import matplotlib.pyplot as plt
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from cod_analytics.classes.map import MapImage
 from cod_analytics.math.directional_stats import (
     DirectionalStats,
     VectorSpaceResults,
 )
+from cod_analytics.math.homography import HomographyCorrection
 from cod_analytics.parser.parsers import parse_map_id
 
 T = TypeVar("T")
@@ -22,7 +23,9 @@ class Engagements:
     ) -> None:
         self.df = dataframe
 
-    def filter_map(self, map_id: str, image_path: str = None) -> "MapEngagements":
+    def filter_map(
+        self, map_id: str, image_path: str = None
+    ) -> "MapEngagements":
         map_id = parse_map_id(map_id)
         filtered_df = self.df.loc[self.df["map_id"] == map_id]
         return MapEngagements(filtered_df, map_id, image_path)
@@ -48,13 +51,56 @@ class MapEngagements:
         self.df = filtered_df
         self.map_id = map_id
         self.map = MapImage(map_id, image_path)
-        self.t_df = self.map.homography.transform_dataframe(
-            self.df, [["ax", "ay"], ["vx", "vy"]]
-        )
+        self.t_df = self.transform_df(self.df)
 
         self.dir_stats = DirectionalStats(self.t_df)
         self.generated_spaces = False
         self.vec_spaces: VectorSpaceResults | None = None
+
+    def transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        return self.map.homography.transform_dataframe(
+            df, [["ax", "ay"], ["vx", "vy"]]
+        )
+
+    def calculate_center(self) -> tuple[float, float]:
+        maxs = self.t_df[["ax", "ay"]].max()
+        mins = self.t_df[["ax", "ay"]].min()
+        return (maxs["ax"] + mins["ax"]) / 2, (maxs["ay"] + mins["ay"]) / 2
+    
+    def centerize(self, center: tuple[float, float]) -> None:
+        """Centerize the map.
+
+        Args:
+            center (tuple[float, float]): Center coordinates.
+        """
+        c1, c2 = self.calculate_center()
+        return (c1 - center[0], c2 - center[1])
+
+    def add_correction(
+        self,
+        translate: tuple[float, float] = (0, 0),
+        rotate: float = 0,
+        scale: float = 1,
+        center: tuple[float, float] = None,
+        rad: bool = False,
+    ) -> None:
+        center = self.calculate_center() if center is None else center
+        correction = HomographyCorrection(
+            translate=translate,
+            rotate=rotate,
+            scale=scale,
+            center=center,
+            rad=rad,
+        )
+        self.map.homography.add_correction(correction)
+        self.t_df = self.transform_df(self.df)
+
+    def use_calibrated_homography(self) -> None:
+        """If a calibrated homography is available, use it instead of the
+        default homography.
+        """
+        self.map.use_calibrated_homography()
+        self.t_df = self.transform_df(self.df)
 
     @staticmethod
     def vector_space_method(func: Callable[P, T]) -> Callable[P, T]:
@@ -129,7 +175,7 @@ class MapEngagements:
             ax (plt.Axes): Axes to plot on.
         """
         self.vec_spaces.plot_geometric_product_field(ax)
-    
+
     @vector_space_method
     def plot_engagements(self, ax: plt.Axes, **kwargs) -> None:
         """Plot the engagements.
@@ -141,5 +187,5 @@ class MapEngagements:
             "s": 1,
         }
         default_kwargs.update(kwargs)
-        ax.scatter(self.t_df["ax"], self.t_df["ay"],c="red", **default_kwargs)
-        ax.scatter(self.t_df["vx"], self.t_df["vy"],c="blue", **default_kwargs)
+        ax.scatter(self.t_df["ax"], self.t_df["ay"], c="red", **default_kwargs)
+        ax.scatter(self.t_df["vx"], self.t_df["vy"], c="blue", **default_kwargs)

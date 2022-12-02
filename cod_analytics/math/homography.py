@@ -15,6 +15,7 @@ class Homography:
     def __init__(self) -> None:
         """Homography class."""
         self.fitted = False
+        self.correction: HomographyCorrection | None = None
 
     @staticmethod
     def fitted_method(func: Callable[P, T]) -> Callable[P, T]:
@@ -81,6 +82,8 @@ class Homography:
         ones_vector = np.ones((points.shape[0], 1))
         points = np.hstack([points, ones_vector])
         initial_solution = self.matrix @ points.T
+        if self.correction is not None:
+            initial_solution = self.correction.apply(initial_solution)
         return np.delete(initial_solution, 2, axis=0).T
 
     @staticmethod
@@ -226,3 +229,72 @@ class Homography:
         except KeyError:
             rotation = np.eye(2)
         return (raw_points - center) @ rotation + center
+
+    def add_correction(self, correction: "HomographyCorrection") -> None:
+        """Adds a correction to the homography. If a correction already exists,
+        it will be replaced.
+
+        Args:
+            correction (HomographyCorrection): Correction to add.
+        """
+        self.correction = correction
+
+
+class HomographyCorrection:
+    """Class for fast homography corrections."""
+
+    def __init__(
+        self,
+        scale: float | tuple[float, float] = 1.0,
+        translate: tuple[float, float] = (0, 0),
+        rotate: float = 0.0,
+        center: tuple[float, float] = (0, 0),
+        rad: bool = True,
+    ) -> None:
+        """Initializes the homography correction.
+
+        Args:
+            scale (float): Scale factor. Defaults to 1.0.
+            translate (tuple[float, float]): Translation vector (x, y). Defaults
+                to (0, 0).
+            rotate (float): Rotation angle. Defaults to 0.0.
+            center (tuple[float, float]): Center of rotation. Defaults to (0,0).
+            rad (bool): Whether the rotation angle is in radians. If False, the
+                angle is assumed to be in degrees. Defaults to True.
+        """
+        if isinstance(scale, (float, int)):
+            scale = (scale, scale)
+        self.scale = np.array(
+            [scale[0], 0, 0, 0, scale[1], 0, 0, 0, 1]
+        ).reshape(3, 3)
+        self.translate = np.array(
+            [1, 0, translate[0], 0, 1, translate[1], 0, 0, 1]
+        ).reshape(3, 3)
+        rotate = Homography.rotation_matrix(rotate, rad=rad)
+        self.rotate = np.array([*rotate[0], 0, *rotate[1], 0, 0, 0, 1]).reshape(
+            3, 3
+        )
+        self.center = np.array(
+            [1, 0, -center[0], 0, 1, -center[1], 0, 0, 1]
+        ).reshape((3, 3))
+        self.center_inv = np.array(
+            [1, 0, center[0], 0, 1, center[1], 0, 0, 1]
+        ).reshape((3, 3))
+
+    def apply(self, points: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+        """Applies the correction to the points.
+
+        Args:
+            points (npt.NDArray[np.float64]): Points to correct. Should be a
+                2D array with shape (3, N).
+
+        Returns:
+            npt.NDArray[np.float64]: Corrected points.
+        #"""
+        return (
+            (self.center @ points).T
+            @ self.rotate
+            @ self.scale
+            @ self.translate.T
+            @ self.center_inv.T
+        ).T

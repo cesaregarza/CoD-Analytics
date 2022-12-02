@@ -2,7 +2,9 @@ import matplotlib.pyplot as plt
 
 from cod_analytics.assets.map_transform_reference import (
     MapSourceOfTruthPoints,
+    MapCorrections,
     retrieve_minimap_image,
+    MapCalibrationReference,
 )
 from cod_analytics.classes import TransformReference
 from cod_analytics.math.homography import Homography
@@ -40,3 +42,11 @@ class MapImage:
             source=source_reference,
             target=target_reference,
         )
+        self.homography.add_correction(MapCorrections.get(map_id))
+
+    def use_calibrated_homography(self) -> None:
+        """Use the calibrated homography for the map."""
+        try:
+            self.homography = MapCalibrationReference.get_transform(self.map_id)
+        except ValueError:
+            pass

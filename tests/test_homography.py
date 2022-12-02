@@ -4,7 +4,7 @@ import pandas.testing as pdt
 import pytest
 
 from cod_analytics.classes import TransformReference
-from cod_analytics.math.homography import Homography
+from cod_analytics.math.homography import Homography, HomographyCorrection
 
 
 class TestHomography:
@@ -85,6 +85,13 @@ class TestHomography:
 
         assert homography.fitted
         assert np.allclose(homography.matrix, np.eye(3))
+
+    def test_homography_add_correction(self) -> None:
+        """Test the add_correction method."""
+        homography = Homography()
+        correction = HomographyCorrection()
+        homography.add_correction(correction)
+        assert homography.correction == correction
 
     @pytest.mark.parametrize("scale", [True, False], ids=["S", "NS"])
     @pytest.mark.parametrize("rotate", [True, False], ids=["R", "NR"])
@@ -184,6 +191,42 @@ class TestHomography:
         homography_expected.fit(corners, transformed_corners)
         expected = homography_expected.transform(XY)
         homography = Homography.from_transform_reference(source, target)
+        XY_transformed = homography.transform(XY)
+        assert np.allclose(XY_transformed, expected)
+
+    @pytest.mark.parametrize("scale", [True, False], ids=["S", "NS"])
+    @pytest.mark.parametrize("rotate", [True, False], ids=["R", "NR"])
+    @pytest.mark.parametrize("translate", [True, False], ids=["T", "NT"])
+    @pytest.mark.parametrize("center", [True, False], ids=["C", "NC"])
+    @pytest.mark.parametrize("square", [True, False], ids=["Sq", "Rect"])
+    def test_homography_with_correction(
+        self,
+        translate: bool,
+        rotate: bool,
+        scale: bool,
+        center: bool,
+        square: bool,
+    ) -> None:
+        translate_val = self.translate if translate else np.zeros(2)
+        rotate_val = self.rotate if rotate else 0.0
+        scale_val = self.scale if scale else 1.0
+        center_val = self.center if center else np.zeros(2)
+
+        # Generate XY data
+        XY = (self.xy if square else self.xy_rect) + center_val
+        corners = np.array(self.xy_corners if square else self.xy_rect_corners)
+        expected = self.transform(
+            XY, translate_val, rotate_val, scale_val, center_val
+        )
+        correction = HomographyCorrection(
+            translate=translate_val,
+            rotate=rotate_val,
+            scale=scale_val,
+            center=center_val,
+        )
+        homography = Homography()
+        homography.fit(corners, corners)
+        homography.add_correction(correction)
         XY_transformed = homography.transform(XY)
         assert np.allclose(XY_transformed, expected)
 
