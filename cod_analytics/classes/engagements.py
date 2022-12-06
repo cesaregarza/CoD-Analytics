@@ -1,9 +1,11 @@
 from typing import Callable, ParamSpec, TypeVar, cast
 
+import matplotlib.patheffects as PathEffects
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from cod_analytics.assets.map_images import MapRemap
 from cod_analytics.classes.map import MapImage
 from cod_analytics.math.directional_stats import (
     DirectionalStats,
@@ -11,7 +13,6 @@ from cod_analytics.math.directional_stats import (
 )
 from cod_analytics.math.homography import HomographyCorrection
 from cod_analytics.parser.parsers import parse_map_id
-from cod_analytics.assets.map_images import MapRemap
 
 T = TypeVar("T")
 P = ParamSpec("P")
@@ -145,7 +146,9 @@ class MapEngagements:
         )
         self.generated_spaces = True
 
-    def initialize_plot(self, include_title: bool = True, **kwargs) -> tuple[plt.Figure, plt.Axes]:
+    def initialize_plot(
+        self, include_title: bool = True, **kwargs
+    ) -> tuple[plt.Figure, plt.Axes]:
         """Initialize the plot.
 
         Args:
@@ -157,8 +160,16 @@ class MapEngagements:
         fig, ax = plt.subplots(**kwargs)
         ax.imshow(self.map.image)
         if include_title:
-            plt.text(100, 100, s=MapRemap.remap(self.map_id), fontsize=31, color="black")
-            plt.text(100, 100, s=MapRemap.remap(self.map_id), fontsize=30, color="white")
+            text = plt.text(
+                100,
+                100,
+                s=MapRemap.remap(self.map_id),
+                fontsize=30,
+                color="white",
+            )
+            text.set_path_effects(
+                [PathEffects.withStroke(linewidth=5, foreground="black")]
+            )
         return fig, ax
 
     @vector_space_method
@@ -194,5 +205,5 @@ class MapEngagements:
             "s": 1,
         }
         default_kwargs.update(kwargs)
-        ax.scatter(self.t_df["ax"], self.t_df["ay"], c="red", **default_kwargs)
-        ax.scatter(self.t_df["vx"], self.t_df["vy"], c="blue", **default_kwargs)
+        ax.scatter(self.t_df["ax"], self.t_df["ay"], c="red", label="attacker", **default_kwargs)
+        ax.scatter(self.t_df["vx"], self.t_df["vy"], c="blue", label="victim", **default_kwargs)

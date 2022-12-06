@@ -217,7 +217,7 @@ class MapCorrections:
         scale=0.77,
         center=(512, 512),
         translate=(-20, -38),
-        rotate=90.0,
+        rotate=270.0,
         rad=False,
     )
     mp_broadcast2 = HomographyCorrection(
@@ -229,25 +229,25 @@ class MapCorrections:
         scale=(0.79, 0.81),
         center=(512, 512),
         translate=(8, -15),
-        rotate=270.0,
+        rotate=90.0,
         rad=False,
     )
     mp_garden = HomographyCorrection(
         scale=1.03,
         center=(512, 512),
         translate=(-3, 0),
-        rotate=90.0,
+        rotate=270.0,
         rad=False,
     )
     mp_hackney_am = HomographyCorrection(
         center=(512, 512),
-        rotate=90.0,
+        rotate=270.0,
         rad=False,
     )
     mp_harbor = HomographyCorrection(
         center=(512, 512),
         translate=(0, -26),
-        rotate=90.0,
+        rotate=270.0,
         rad=False,
     )
     mp_hardhat = HomographyCorrection(
@@ -258,54 +258,54 @@ class MapCorrections:
         scale=0.725,
         center=(512, 512),
         translate=(0, 5),
-        rotate=270.0,
+        rotate=90.0,
         rad=False,
     )
     mp_killhouse = HomographyCorrection(
         center=(512, 512),
-        rotate=270.0,
+        rotate=90.0,
         rad=False,
     )
     mp_malyshev = HomographyCorrection(
         center=(512, 512),
-        rotate=90.0,
+        rotate=270.0,
         rad=False,
     )
     mp_oilrig = HomographyCorrection(
         center=(512, 512),
         translate=(-3, 3),
-        rotate=270.0,
+        rotate=90.0,
         rad=False,
     )
     mp_petrograd = HomographyCorrection(
         center=(512, 512),
-        rotate=90.0,
+        rotate=270.0,
         rad=False,
     )
     mp_scrapyard = HomographyCorrection(
         scale=0.71,
         center=(512, 512),
         translate=(-5, -8),
-        rotate=240.0,
+        rotate=120.0,
         rad=False,
     )
     mp_spear = HomographyCorrection(
         center=(512, 512),
-        rotate=90.0,
+        rotate=270.0,
         rad=False,
     )
     mp_vacant = HomographyCorrection(
         scale=0.83,
         center=(512, 512),
         translate=(35, 15),
-        rotate=45.0,
+        rotate=315.0,
         rad=False,
     )
     mp_village2 = HomographyCorrection(
         scale=0.83,
         center=(512, 512),
         translate=(10, -10),
-        rotate=90.0,
+        rotate=270.0,
         rad=False,
     )
 

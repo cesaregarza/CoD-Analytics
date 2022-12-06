@@ -42,7 +42,7 @@ class Homography:
     def fit(
         self, source: npt.NDArray[np.float64], target: npt.NDArray[np.float64]
     ) -> None:
-        """Fits the homography to the source and target points.
+        """Fits the homography to the reference source and target points.
 
         Args:
             source (npt.NDArray[np.float64]): Source points.
@@ -280,6 +280,13 @@ class HomographyCorrection:
         self.center_inv = np.array(
             [1, 0, center[0], 0, 1, center[1], 0, 0, 1]
         ).reshape((3, 3))
+        self.matrix = (
+            self.center_inv
+            @ self.translate
+            @ self.scale
+            @ self.rotate
+            @ self.center
+        )
 
     def apply(self, points: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
         """Applies the correction to the points.
@@ -290,11 +297,5 @@ class HomographyCorrection:
 
         Returns:
             npt.NDArray[np.float64]: Corrected points.
-        #"""
-        return (
-            (self.center @ points).T
-            @ self.rotate
-            @ self.scale
-            @ self.translate.T
-            @ self.center_inv.T
-        ).T
+        """
+        return self.matrix @ points
