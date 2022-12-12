@@ -67,9 +67,9 @@ class DirectionalStats:
         self.data["norm_x"] = np.cos(self.data["angle"])
         self.data["norm_y"] = np.sin(self.data["angle"])
 
-    def generate_vector_spaces(
+    def generate_vector_bundle(
         self, min_points: int = 0, *args, **kwargs
-    ) -> "VectorSpaceResults":
+    ) -> "VectorBundle":
         """Generates attacker and victim vector spaces for the given map. Passes
         any additional arguments via args and kwargs to SciPy's
         binned_statistic_2d.
@@ -79,7 +79,7 @@ class DirectionalStats:
                 include it in the results. Defaults to 0.
 
         Returns:
-            VectorSpaceResults: Results of the vector space generation.
+            VectorBundle: Results of the vector space generation.
         """
         data = self.data.copy()
         x_max = data[["ax", "vx"]].max().max()
@@ -126,10 +126,10 @@ class DirectionalStats:
             v_vals_y = binned_stat_part(amcy_partial, "v").statistic
             v_vals = v_vals_x + 1j * v_vals_y
 
-        return VectorSpaceResults(a_vals, v_vals, x_edges, y_edges)
+        return VectorBundle(a_vals, v_vals, x_edges, y_edges)
 
 
-class VectorSpaceResults:
+class VectorBundle:
     """Class for storing the results of vector space generation, including
     methods for plotting the results and computing the geometric product of
     the input vector spaces."""
@@ -141,7 +141,7 @@ class VectorSpaceResults:
         x_edges: npt.NDArray[np.float64],
         y_edges: npt.NDArray[np.float64],
     ) -> None:
-        """Initializes the VectorSpaceResults class.
+        """Initializes the VectorBundle class.
 
         Args:
             a_vals (npt.NDArray[np.complex128]): Mean and variance of attacker

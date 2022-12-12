@@ -2,6 +2,7 @@ from typing import Callable, ParamSpec, TypeVar, cast
 
 import matplotlib.patheffects as PathEffects
 import matplotlib.pyplot as plt
+from matplotlib import cm, patches
 import numpy as np
 import pandas as pd
 
@@ -9,7 +10,7 @@ from cod_analytics.assets.map_images import MapRemap
 from cod_analytics.classes.map import MapImage
 from cod_analytics.math.directional_stats import (
     DirectionalStats,
-    VectorSpaceResults,
+    VectorBundle,
 )
 from cod_analytics.math.homography import HomographyCorrection
 from cod_analytics.parser.parsers import parse_map_id
@@ -57,7 +58,7 @@ class MapEngagements:
 
         self.dir_stats = DirectionalStats(self.t_df)
         self.generated_spaces = False
-        self.vec_spaces: VectorSpaceResults | None = None
+        self.vec_bundle: VectorBundle | None = None
 
     def transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
         return self.map.homography.transform_dataframe(
@@ -105,7 +106,7 @@ class MapEngagements:
         self.t_df = self.transform_df(self.df)
 
     @staticmethod
-    def vector_space_method(func: Callable[P, T]) -> Callable[P, T]:
+    def vector_bundle_method(func: Callable[P, T]) -> Callable[P, T]:
         """Decorator to check if the vector spaces have been generated before
         calling the decorated function.
 
@@ -123,12 +124,12 @@ class MapEngagements:
             else:
                 raise RuntimeError(
                     "Vector spaces must be generated before calling this "
-                    "method. Call the generate_vector_spaces method first."
+                    "method. Call the generate_vector_bundle method first."
                 )
 
         return wrapper
 
-    def generate_vector_spaces(
+    def generate_vector_bundle(
         self,
         min_points: int = 10,
         bins: int | list[int] | tuple[int, int] = (15, 15),
@@ -141,7 +142,7 @@ class MapEngagements:
             bins (int | list[int] | tuple[int, int], optional): Number of bins
                 to use for the directional stats. Defaults to (15, 15).
         """
-        self.vec_spaces = self.dir_stats.generate_vector_spaces(
+        self.vec_bundle = self.dir_stats.generate_vector_bundle(
             min_points=min_points, bins=bins
         )
         self.generated_spaces = True
@@ -172,29 +173,28 @@ class MapEngagements:
             )
         return fig, ax
 
-    @vector_space_method
+    @vector_bundle_method
     def plot_vector_spaces(self, ax: plt.Axes) -> None:
         """Plot the vector spaces.
 
         Args:
             ax (plt.Axes): Axes to plot on.
         """
-        self.vec_spaces.plot_vector_field(
+        self.vec_bundle.plot_vector_field(
             ax, "v", label="killed from direction"
         )
-        self.vec_spaces.plot_vector_field(ax, "a", label="kill direction")
+        self.vec_bundle.plot_vector_field(ax, "a", label="kill direction")
         ax.legend()
 
-    @vector_space_method
+    @vector_bundle_method
     def plot_geometric_product_field(self, ax: plt.Axes) -> None:
         """Plot the geometric product field.
 
         Args:
             ax (plt.Axes): Axes to plot on.
         """
-        self.vec_spaces.plot_geometric_product_field(ax)
+        self.vec_bundle.plot_geometric_product_field(ax)
 
-    @vector_space_method
     def plot_engagements(self, ax: plt.Axes, **kwargs) -> None:
         """Plot the engagements.
 
@@ -207,3 +207,82 @@ class MapEngagements:
         default_kwargs.update(kwargs)
         ax.scatter(self.t_df["ax"], self.t_df["ay"], c="red", label="attacker", **default_kwargs)
         ax.scatter(self.t_df["vx"], self.t_df["vy"], c="blue", label="victim", **default_kwargs)
+    
+    @vector_bundle_method
+    def plot_histogram(self, ax: plt.Axes, av:str, log: bool = False, **kwargs) -> None:
+        """Plot the histogram of the engagements using the provided binning
+        data.
+
+        Args:
+            ax (plt.Axes): Axes to plot on.
+            av (str): Which vector space to use for the histogram. Accepts
+                "a" for attacker, "v" for victim, or "av" for both.
+        """
+        default_kwargs = {"alpha": 0.33}
+        default_kwargs.update(kwargs)
+        data = []
+        if "a" in av:
+            data.append(self.t_df[["ax", "ay"]].values)
+        
+        if "v" in av:
+            data.append(self.t_df[["vx", "vy"]].values)
+        
+        data = np.concatenate(data)
+        x_edges = self.vec_bundle.x_edges
+        y_edges = self.vec_bundle.y_edges
+        hist, _, _ = np.histogram2d(
+            data[:, 0], data[:, 1], bins=(x_edges, y_edges)
+        )
+        if log:
+            hist = np.log(hist)
+        max_val = np.max(hist)
+        hist = hist / max_val
+        for i in range(hist.shape[0]):
+            for j in range(hist.shape[1]):
+                # Skip if magnitude is 0
+                if hist[i, j] == 0:
+                    continue
+                anchor_x = x_edges[i]
+                anchor_y = y_edges[j]
+                patch = patches.Rectangle(
+                    (anchor_x, anchor_y),
+                    self.vec_bundle.bin_size_x,
+                    self.vec_bundle.bin_size_y,
+                    color=cm.viridis(hist[i, j]),
+                    fill=True,
+                    **default_kwargs,
+                )
+                ax.add_patch(patch)
+
+    @vector_bundle_method
+    def plot_geometric_histogram(self, **kwargs) -> None:
+        """Plot the geometric histogram of the engagements using the provided
+        binning data.
+        """
+        default_kwargs = {
+            "bins": (
+                len(self.vec_bundle.x_edges) - 1,
+                len(self.vec_bundle.y_edges) - 1,
+            ),
+            "figsize": (10, 10),
+        }
+        default_kwargs.update(kwargs)
+        if isinstance(default_kwargs["bins"], int):
+            default_kwargs["bins"] = (default_kwargs["bins"], default_kwargs["bins"])
+        
+        geometric_product = self.vec_bundle.geometric_product_field()
+        geometric_product = geometric_product[~np.isnan(geometric_product)]
+        magnitude = np.abs(geometric_product).flatten()
+        angle = np.angle(geometric_product).flatten()
+
+        hist, _, _ = np.histogram2d(angle, magnitude, bins=default_kwargs["bins"])
+        R = np.linspace(0, 1, hist.shape[0])
+        THETA = np.linspace(-np.pi, np.pi, hist.shape[1])
+
+        fig, ax = plt.subplots(**default_kwargs, subplot_kw={"projection": "polar"})
+        ax.grid(False)
+        ax.pcolormesh(THETA, R, hist, cmap="viridis")
+        ax.yaxis.grid(True, color="white", alpha=0.5)
+        ax.yaxis.set_tick_params(color="white", labelcolor="white")
+        ax.set_rlabel_position(90)
+        return fig, ax
